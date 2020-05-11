@@ -10,6 +10,7 @@
     "prestart": "yarn clean&&tsc",
     "start": "node build/progress",
     "build:test": "yarn clean&&tsc --p tsconfig.test.json",
+    "pretest": "yarn build:test",
     "test": "mocha build/**/*.spec.js"
   },
   "dependencies": {
