@@ -1,0 +1,9 @@
+{
+  "name": "progress-Rx-operator",
+  "version": "0.0.0",
+  "description": "progress() Rx operator",
+  "main": "index.js",
+  "repository": "https://github.com/han41858/progress-Rx-operator",
+  "author": "Han Jang-hyun <han41858@gmail.com>",
+  "license": "MIT"
+}
