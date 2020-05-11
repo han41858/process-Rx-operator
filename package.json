@@ -7,10 +7,13 @@
   "license": "MIT",
   "scripts": {
     "clean": "rimraf dist",
-    "start": "yarn clean&&tsc&&node build/progress",
-    "test": "yarn clean&&tsc --p tsconfig.test.json&&mocha build/**/*.spec.js"
+    "prestart": "yarn clean&&tsc",
+    "start": "node build/progress",
+    "build:test": "yarn clean&&tsc --p tsconfig.test.json",
+    "test": "mocha build/**/*.spec.js"
   },
   "dependencies": {
+    "rxjs": "^6.5.5",
     "typescript": "^3.8.3"
   },
   "devDependencies": {
