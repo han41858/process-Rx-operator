@@ -2,8 +2,14 @@
   "name": "progress-Rx-operator",
   "version": "0.0.0",
   "description": "progress() Rx operator",
-  "main": "index.js",
   "repository": "https://github.com/han41858/progress-Rx-operator",
   "author": "Han Jang-hyun <han41858@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "start": "rimraf dist&&tsc&&node build/progress"
+  },
+  "dependencies": {
+    "rimraf": "^3.0.2",
+    "typescript": "^3.8.3"
+  }
 }
