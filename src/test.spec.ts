@@ -1,4 +1,4 @@
-import { describe, it } from 'mocha';
+import { describe, Done, it } from 'mocha';
 import { expect } from 'chai';
 
 import { combineLatest, from, Observer, of, timer } from 'rxjs';
@@ -115,68 +115,109 @@ describe('observable', () => {
 });
 
 describe.only('progress', () => {
-    describe('with progress value', () => {
-        // one-time
+    let nextFncCallCount: number;
+    let errorFncCallCount: number;
 
-        it('with delay', (done) => {
-            const delays: number[] = new Array(10)
-                .fill(undefined)
-                .map((nothing, i: number, arr: number[]) => {
-                    return (2000 - 100) * i / arr.length; // default timeout of mocha is 2000ms
-                });
+    beforeEach(() => {
+        nextFncCallCount = 0;
+        errorFncCallCount = 0;
+    });
 
-            const maxDelay: number = Math.max(...delays);
-            const delayMargin: number = 15;
+    xit('one-time', (done: Done) => {
+        const data: number[] = new Array(3)
+            .fill(undefined)
+            .map((nothing, i: number) => {
+                return 10 + i;
+            });
 
-            let startTime: Date;
-            let timeGap: number;
+        const observer: Observer<[number[], number]> = {
+            next([result, progress]: [number[], number]): void {
+                console.log(result, progress);
 
-            let nextFncCallCount: number = 0;
-            let errorFncCallCount: number = 0;
+                expect(result).to.be.a('array');
+                expect(result).to.be.lengthOf(data.length);
 
-            const observer: Observer<[number[], number]> = {
-                next([result, progress]: [number[], number]): void {
-                    console.log(result, progress);
+                expect(progress).to.be.a('number');
+                expect(progress).to.be.gte(0);
+                expect(progress).to.be.lte(1);
 
-                    expect(result).to.be.a('array');
-                    expect(result).to.be.lengthOf(delays.length);
+                ++nextFncCallCount;
+            },
+            error(err: any): void {
+                console.log('error() in spec');
 
-                    expect(progress).to.be.a('number');
-                    expect(progress).to.be.gte(0);
-                    expect(progress).to.be.lte(1);
+                ++errorFncCallCount;
+            },
+            complete(): void {
+                console.log('complete() in spec');
 
-                    ++nextFncCallCount;
-                },
-                error(err: any): void {
-                    console.log('error() in spec');
+                expect(nextFncCallCount).to.be.eql(1);
+                expect(errorFncCallCount).to.be.eql(0);
 
-                    ++errorFncCallCount;
-                },
-                complete(): void {
-                    console.log('complete() in spec');
+                done();
+            }
+        };
 
-                    expect(nextFncCallCount).to.be.eql(delays.length + 1); // +1 for initial emit
-                    expect(errorFncCallCount).to.be.eql(0);
+        progress<number[]>(data.map(value => {
+            return of(value);
+        })).subscribe(observer);
+    });
 
-                    timeGap = +new Date() - +startTime;
+    it('with delay', (done: Done) => {
+        const delays: number[] = new Array(3)
+            .fill(undefined)
+            .map((nothing, i: number, arr: number[]) => {
+                return (2000 - 100) * i / arr.length; // default timeout of mocha is 2000ms
+            });
 
-                    console.log('timeGap:', timeGap);
+        const maxDelay: number = Math.max(...delays);
+        const delayMargin: number = 15;
 
-                    expect(timeGap).to.be.above(maxDelay - delayMargin);
-                    expect(timeGap).to.be.below(maxDelay + delayMargin);
+        let startTime: Date;
+        let timeGap: number;
 
-                    done();
-                }
-            };
+        const observer: Observer<[number[], number]> = {
+            next([result, progress]: [number[], number]): void {
+                console.log(result, progress);
 
-            startTime = new Date();
+                expect(result).to.be.a('array');
+                expect(result).to.be.lengthOf(delays.length);
 
-            progress<number[]>(delays.map(value => {
-                return timer(value)
-                    .pipe(
-                        switchMap(() => of(value))
-                    );
-            })).subscribe(observer);
-        });
+                expect(progress).to.be.a('number');
+                expect(progress).to.be.gte(0);
+                expect(progress).to.be.lte(1);
+
+                ++nextFncCallCount;
+            },
+            error(err: any): void {
+                console.log('error() in spec');
+
+                ++errorFncCallCount;
+            },
+            complete(): void {
+                console.log('complete() in spec');
+
+                expect(nextFncCallCount).to.be.eql(delays.length + 1); // +1 for initial emit
+                expect(errorFncCallCount).to.be.eql(0);
+
+                timeGap = +new Date() - +startTime;
+
+                console.log('timeGap:', timeGap);
+
+                expect(timeGap).to.be.above(maxDelay - delayMargin);
+                expect(timeGap).to.be.below(maxDelay + delayMargin);
+
+                done();
+            }
+        };
+
+        startTime = new Date();
+
+        progress<number[]>(delays.map(value => {
+            return timer(value)
+                .pipe(
+                    switchMap(() => of(value))
+                );
+        })).subscribe(observer);
     });
 });
