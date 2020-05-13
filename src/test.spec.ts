@@ -114,7 +114,7 @@ describe('observable', () => {
     });
 });
 
-describe.only('progress', () => {
+describe('progress', () => {
     let nextFncCallCount: number;
     let errorFncCallCount: number;
 
@@ -123,17 +123,17 @@ describe.only('progress', () => {
         errorFncCallCount = 0;
     });
 
-    xit('one-time', (done: Done) => {
+    it('one-time', (done: Done) => {
         const data: number[] = new Array(3)
             .fill(undefined)
             .map((nothing, i: number) => {
                 return 10 + i;
             });
 
+        let lastProgress: number;
+
         const observer: Observer<[number[], number]> = {
             next([result, progress]: [number[], number]): void {
-                console.log(result, progress);
-
                 expect(result).to.be.a('array');
                 expect(result).to.be.lengthOf(data.length);
 
@@ -142,17 +142,17 @@ describe.only('progress', () => {
                 expect(progress).to.be.lte(1);
 
                 ++nextFncCallCount;
+
+                lastProgress = progress;
             },
             error(err: any): void {
-                console.log('error() in spec');
-
                 ++errorFncCallCount;
             },
             complete(): void {
-                console.log('complete() in spec');
-
                 expect(nextFncCallCount).to.be.eql(1);
                 expect(errorFncCallCount).to.be.eql(0);
+
+                expect(lastProgress).to.be.eql(1);
 
                 done();
             }
@@ -170,6 +170,8 @@ describe.only('progress', () => {
                 return (2000 - 100) * i / arr.length; // default timeout of mocha is 2000ms
             });
 
+        let lastProgress: number;
+
         const maxDelay: number = Math.max(...delays);
         const delayMargin: number = 15;
 
@@ -178,8 +180,6 @@ describe.only('progress', () => {
 
         const observer: Observer<[number[], number]> = {
             next([result, progress]: [number[], number]): void {
-                console.log(result, progress);
-
                 expect(result).to.be.a('array');
                 expect(result).to.be.lengthOf(delays.length);
 
@@ -188,21 +188,19 @@ describe.only('progress', () => {
                 expect(progress).to.be.lte(1);
 
                 ++nextFncCallCount;
+
+                lastProgress = progress;
             },
             error(err: any): void {
-                console.log('error() in spec');
-
                 ++errorFncCallCount;
             },
             complete(): void {
-                console.log('complete() in spec');
-
                 expect(nextFncCallCount).to.be.eql(delays.length + 1); // +1 for initial emit
                 expect(errorFncCallCount).to.be.eql(0);
 
-                timeGap = +new Date() - +startTime;
+                expect(lastProgress).to.be.eql(1);
 
-                console.log('timeGap:', timeGap);
+                timeGap = +new Date() - +startTime;
 
                 expect(timeGap).to.be.above(maxDelay - delayMargin);
                 expect(timeGap).to.be.below(maxDelay + delayMargin);
@@ -219,5 +217,50 @@ describe.only('progress', () => {
                     switchMap(() => of(value))
                 );
         })).subscribe(observer);
+    });
+
+    it('complex', (done: Done) => {
+        const sources = [
+            timer(1000).pipe(switchMap(() => of(1000))),
+            of(0),
+            of(1),
+            timer(1500).pipe(switchMap(() => of(1500)))
+        ];
+
+        let lastProgress: number;
+
+        const observer: Observer<[number[], number]> = {
+            next([result, progress]: [number[], number]): void {
+                expect(result).to.be.a('array');
+                expect(result).to.be.lengthOf(sources.length);
+
+                expect(progress).to.be.a('number');
+                expect(progress).to.be.gte(0);
+                expect(progress).to.be.lte(1);
+
+                ++nextFncCallCount;
+
+                lastProgress = progress;
+            },
+            error(err: any): void {
+                ++errorFncCallCount;
+            },
+            complete(): void {
+                // * count : 3
+                // initial, 0, 1
+                // 1000
+                // 1500
+
+                expect(nextFncCallCount).to.be.eql(3);
+                expect(errorFncCallCount).to.be.eql(0);
+
+                expect(lastProgress).to.be.eql(1);
+
+                done();
+            }
+        };
+
+        progress(sources)
+            .subscribe(observer);
     });
 });

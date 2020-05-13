@@ -1,56 +1,55 @@
-import { combineLatest, defer, Observable, Subject } from 'rxjs';
-import { finalize, tap } from 'rxjs/operators';
+import { merge, Observable, of } from 'rxjs';
+import { debounceTime, map, scan } from 'rxjs/operators';
+
+interface SingleData {
+    index: number;
+    value: any;
+}
+
+interface AccObj<R> {
+    completeFlagArr: boolean[];
+    valueArr: R;
+}
 
 
-export function progress<R extends any[]>(sources: Observable<any>[]) {
-    // returns deferred factory function
-    return defer(() => {
-        const size: number = sources.length;
-
-        const completeFlagArr: boolean[] = new Array(size).fill(undefined);
-        const completeValueArr: R = new Array(size).fill(undefined) as R;
-
-        const outer$: Subject<[R, number]> = new Subject<[R, number]>();
-
-        function emit(): void {
-            const progressValue: number = completeFlagArr.filter(complete => complete).length / size;
-
-            outer$.next([
-                completeValueArr,
-                progressValue
-            ]);
-        }
-
-        // setTimeout() for observables end immediately
-        setTimeout(() => {
-            // initial emit
-            emit();
-
-            combineLatest(sources.map((one$, i) => {
-                return one$.pipe(
-                    tap((value) => {
-                        completeValueArr[i] = value;
-                    }),
-                    finalize(() => {
-                        completeFlagArr[i] = true;
-
-                        emit();
+export function progress<R extends any[]>(sources: Observable<any>[]): Observable<[R, number]> {
+    return merge(
+        of(null), // initial emit
+        merge(
+            ...sources.map((source$: Observable<any>, index: number) => {
+                return source$.pipe(
+                    // inject index
+                    map((value: any): SingleData => {
+                        return {
+                            index,
+                            value: value
+                        };
                     })
                 );
-            })).subscribe({
-                error(err: any): void {
-                    outer$.error(err);
-                },
-                complete(): void {
-                    // wait 1 cycle to emit
-                    setTimeout(() => {
-                        outer$.complete();
-                    });
+            })
+        )
+    )
+        .pipe(
+            // accumulate complete flag & value
+            scan((acc: AccObj<R>, cur: SingleData) => {
+                if (!!cur) {
+                    acc.completeFlagArr[cur.index] = true;
+                    acc.valueArr[cur.index] = cur.value;
                 }
-            });
-        });
 
-        return outer$;
-    });
+                return acc;
+            }, {
+                completeFlagArr: new Array(sources.length).fill(undefined),
+                valueArr: new Array(sources.length).fill(undefined)
+            }),
+            // refine observables of same timing
+            debounceTime(0),
+            // convert to result format
+            map((obj: AccObj<R>): [R, number] => {
+                const completeCount: number = obj.completeFlagArr.filter(flag => flag).length;
+                const progressValue: number = completeCount / obj.completeFlagArr.length;
 
+                return [obj.valueArr, progressValue];
+            })
+        );
 }
