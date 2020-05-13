@@ -164,7 +164,7 @@ describe.only('progress', () => {
     });
 
     it('with delay', (done: Done) => {
-        const delays: number[] = new Array(3)
+        const delays: number[] = new Array(5)
             .fill(undefined)
             .map((nothing, i: number, arr: number[]) => {
                 return (2000 - 100) * i / arr.length; // default timeout of mocha is 2000ms
