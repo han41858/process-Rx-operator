@@ -31,7 +31,7 @@ export function progress<R extends any[]>(sources: Observable<any>[]): Observabl
     )
         .pipe(
             // accumulate complete flag & value
-            scan((acc: AccObj<R>, cur: SingleData) => {
+            scan<SingleData | null, AccObj<R>>((acc: AccObj<R>, cur: SingleData | null) => {
                 if (!!cur) {
                     acc.completeFlagArr[cur.index] = true;
                     acc.valueArr[cur.index] = cur.value;
@@ -40,7 +40,7 @@ export function progress<R extends any[]>(sources: Observable<any>[]): Observabl
                 return acc;
             }, {
                 completeFlagArr: new Array(sources.length).fill(undefined),
-                valueArr: new Array(sources.length).fill(undefined)
+                valueArr: new Array(sources.length).fill(undefined) as R
             }),
             // refine observables of same timing
             debounceTime(0),
